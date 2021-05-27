@@ -11,7 +11,7 @@ The Hydra Multi-Key System (HMKS) proposed here creates a more efficient variant
 Requiring the use of multiple keys in a cryptographic system prevents the lost of control of a single key from impacting the entire cryptographic strength in the system when implemented correctly. One example of use for multiple keys cryptographic system includes custodian based protection of highly sensitive data. Multiple Key Cryptographic Systems (MKCS) also takes into consideration the seperation of keys and their containing and executing hardware in different environments to ensure that the compromise of a single environment or hardware will not lead to the leakage of highly sensitive materials including resisting backdoor implants that are potentially existing on untrusted hardware and environments.
 
 ### Microsoft Double Key Encryption Scheme
-The Microsoft DKE scheme can be found [here] (https://docs.microsoft.com/en-us/microsoft-365/compliance/double-key-encryption?view=o365-worldwide). In simple terms, you have two storage locations for two asymmetric cryptographic keys of the same bit lengths and same key algorithm type. You designate which asymmetric keys to encrypt under in a sequential order and you encrypt your data under that sequential order of asymmetric keys. The decryption routine reverses the sequential order by requiring decryption on the last asymmetric key used to encrypt your document first.
+The Microsoft DKE scheme can be found [here] (https://docs.microsoft.com/en-us/microsoft-365/compliance/double-key-encryption?view=o365-worldwide) . In simple terms, you have two storage locations for two asymmetric cryptographic keys of the same bit lengths and same key algorithm type. You designate which asymmetric keys to encrypt under in a sequential order and you encrypt your data under that sequential order of asymmetric keys. The decryption routine reverses the sequential order by requiring decryption on the last asymmetric key used to encrypt your document first.
 
 <sub>Note: The File Encryption Key used for encrypting the file content will be the target for the asymmetric keys' encryption.</sub>
 
@@ -29,6 +29,8 @@ During the HMKS Decryption phase, the HMKS would follow the procedures:
 1.	The KEK Halves are extracted from the document or encrypted data and each halves are sent to their original asymmetric keys that encrypted the KEK Halves. Sending the wrong KEK Halves to the wrong asymmetric key would lead to incorrect MCS.
 2.	Once the decrypted KEK Halves arrive, they are assembled by concatenation of the order they were split to form the original MCS.
 3.	The same secure psuedo-random function is used on the MCS to process the decryption of the document or sensitive data.
+
+![HMKS Decryption Phase](/images/HMKS-Decrypt-Flow.png)
 
 ### Differences and Similarities
 The DKE and HMKS shares the same intention of protecting sensitive data using multiple keys to reduce the impact of compromised keys from possibly backdoored hardware or execution environments utilizing two or more asymmetric keys as wrapper keys for the sensitive content's File Encryption Key.
