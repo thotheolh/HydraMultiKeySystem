@@ -25,6 +25,9 @@ The HMKS system requires the following steps to be observed during the Encryptio
 4.	The MCS is permutated using a secure pseudo-random function (i.e. SHA-256 secure hash) to generate the sufficient key length for the File Encryption Key. If a keystream is required, a keystream generator could be used with the MCS as the seed for the keystream generator to encrypt the content.
 5.	After encrypting the document or sensitive data, the keystream or File Encryption Key is secure cleared.
 
+![HMKS Encryption Phase](/images/HMKS-Encrypt-Flow.png)
+
+
 During the HMKS Decryption phase, the HMKS would follow the procedures: 
 1.	The KEK Halves are extracted from the document or encrypted data and each halves are sent to their original asymmetric keys that encrypted the KEK Halves. Sending the wrong KEK Halves to the wrong asymmetric key would lead to incorrect MCS.
 2.	Once the decrypted KEK Halves arrive, they are assembled by concatenation of the order they were split to form the original MCS.
