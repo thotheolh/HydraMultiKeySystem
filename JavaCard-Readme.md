@@ -1,8 +1,8 @@
 # JavaCard Applet for Hdyra Multi-Key System
 
 ### AID
-Package AID: 48 59 44 52 41
-Applet AID : 48 59 44 52 41 30 31 30 30
+- Package AID: 48 59 44 52 41
+- Applet AID : 48 59 44 52 41 30 31 30 30
 
 ### JCVM
 - JCVM 3.0.4
