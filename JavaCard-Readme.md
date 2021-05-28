@@ -49,7 +49,7 @@ A 'HydraAplet.cap' file is available in the 'JavaCard-Applet' folder with source
 		-	Data:
 			-	Version (2 bytes, 0x0100)
 			-	Uncompressed Target ECC-SECP256R1 Public Key (65 bytes)
-			-	Encrypted Secret (32 to 64 bytes length of AS-ECB-256 encrypted secret)
+			-	Encrypted Secret (32 to 64 bytes length of AES-ECB-256 encrypted secret)
 		
 	-	Output:
 		-	SW:  0x9000
@@ -58,4 +58,4 @@ A 'HydraAplet.cap' file is available in the 'JavaCard-Applet' folder with source
 		-	Re-encrypted Data (P1 == 0x02):	
 			-	Version (2 bytes, 0x0100)
 			-	Uncompressed Ephemeral ECC-SECP256R1 Public Key (65 bytes)
-			-	Re-encrypted Secret (32 to 64 bytes length of AS-ECB-256 encrypted secret)		
+			-	Re-encrypted Secret (32 to 64 bytes length of AES-ECB-256 encrypted secret)		
