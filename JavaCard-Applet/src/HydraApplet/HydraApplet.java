@@ -24,7 +24,6 @@ public class HydraApplet extends Applet {
     private static ECPrivateKey tmpEcPrivKey;
     private static ECPublicKey tmpEcPubKey;
     private static KeyPair tmpKp;
-    private static RandomData rand = null;
     private static KeyAgreement ecdh = null;
     private static MessageDigest hash = null;
     private static Cipher aesCipher = null;
@@ -40,11 +39,15 @@ public class HydraApplet extends Applet {
 
     public static void install(byte[] bArray, short bOffset, byte bLength) {
         eccAlgo = new ECC();
-        rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         ecdh = KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH_PLAIN, false);
         aesCipher = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_ECB_NOPAD, false);
         aesKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES_TRANSIENT_DESELECT, KeyBuilder.LENGTH_AES_256, false);
         b0 = JCSystem.makeTransientByteArray((short) 65, JCSystem.MEMORY_TYPE_TRANSIENT_DESELECT);
+        hash = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
+        tmpEcPrivKey = (ECPrivateKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PRIVATE_TRANSIENT_DESELECT,
+                KeyBuilder.LENGTH_EC_FP_256, false);
+        tmpEcPubKey = (ECPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PUBLIC, KeyBuilder.LENGTH_EC_FP_256,
+                false);
         new HydraApplet().register(bArray, (short) (bOffset + 1), bArray[bOffset]);
     }
 
@@ -87,30 +90,47 @@ public class HydraApplet extends Applet {
                     ISOException.throwIt(ISO7816.SW_INCORRECT_P1P2);
                 }
 
-                if (!(buf[apdu.getOffsetCdata()] == (byte) 0x01
-                        && buf[(short) (apdu.getOffsetCdata() + 1)] == (byte) 0x00)) {
-                    ISOException.throwIt(ISO7816.SW_DATA_INVALID);
-                }
-
-                if ((len < 99) || (len > 131)) {
-                    ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
-                }
-
-                // Data Format: <0100 protocol version><65 byte ECC-P256R1 uncompressed public
-                // key><AES-256-ECB encrypted secret up to 64 bytes long>
                 if (p1 == P1_DECRYPT) {
+                    // Input Data Format: <0100 protocol version><65 byte ECC-P256R1 uncompressed
+                    // public key><AES-256-ECB encrypted secret up to 64 bytes long>
+
+                    if ((len < 99) || (len > 131)) {
+                        ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+                    }
+
+                    if (!(buf[apdu.getOffsetCdata()] == (byte) 0x01
+                            && buf[(short) (apdu.getOffsetCdata() + 1)] == (byte) 0x00)) {
+                        ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+                    }
+
                     len = keyDecrypt(buf, (short) (apdu.getOffsetCdata() + 2), (short) (len - 2), b0, (short) 0, b0,
                             (short) 0, hashAlgo);
                     Util.arrayCopyNonAtomic(b0, (short) 0, buf, (short) 0, len);
                     Util.arrayFillNonAtomic(b0, (short) 0, (short) b0.length, (byte) 0x00);
                     apdu.setOutgoingAndSend((short) 0, len);
                 } else if (p1 == P1_RECRYPT) {
+                    // Input Data Format: <0100 protocol version><65 byte ECC-P256R1 wrapping
+                    // uncompressed public key><AES-256-ECB encrypted secret up to 64 bytes long><65
+                    // byte ECC-P256R1 target uncompressed>
+                    if ((len < 164) || (len > 196)) {
+                        ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+                    }
+
+                    if (!(buf[apdu.getOffsetCdata()] == (byte) 0x01
+                            && buf[(short) (apdu.getOffsetCdata() + 1)] == (byte) 0x00)) {
+                        ISOException.throwIt(ISO7816.SW_DATA_INVALID);
+                    }
+
                     // Decrypt
-                    len = keyDecrypt(buf, (short) (apdu.getOffsetCdata() + 2), (short) (len - 2), b0, (short) 0, b0,
+                    len = keyDecrypt(buf, (short) (apdu.getOffsetCdata() + 2), (short) (len - 67), b0, (short) 0, b0,
                             (short) 0, hashAlgo);
 
                     // Compact decrypted secret onto apdu buffer
                     Util.arrayCopyNonAtomic(b0, (short) 0, buf, (short) (apdu.getOffsetCdata() + 67), len);
+
+                    // Bring target public key for encryption forward to replace wrapping public key
+                    Util.arrayCopyNonAtomic(buf, (short) (apdu.getOffsetCdata() + 67 + len), buf,
+                            (short) (apdu.getOffsetCdata() + 2), (short) 65);
 
                     // Encrypt
                     len = keyEncrypt(buf, (short) (apdu.getOffsetCdata() + 2), (short) (65 + len), b0, (short) 0, b0,
@@ -118,9 +138,9 @@ public class HydraApplet extends Applet {
 
                     // Format return result <0100 protocol version><65 byte ECC-P256R1 uncompressed
                     // public key><AES-256-ECB encrypted secret up to 64 bytes long>
-					tmpEcPubKey.getW(buf, (short) (apdu.getOffsetCdata() + 2));
-					Util.arrayCopyNonAtomic(b0, (short) 0, buf, (short) (apdu.getOffsetCdata() + 67), len);
-					Util.arrayFillNonAtomic(b0, (short) 0, (short) b0.length, (byte) 0x00);
+                    tmpEcPubKey.getW(buf, (short) (apdu.getOffsetCdata() + 2));
+                    Util.arrayCopyNonAtomic(b0, (short) 0, buf, (short) (apdu.getOffsetCdata() + 67), len);
+                    Util.arrayFillNonAtomic(b0, (short) 0, (short) b0.length, (byte) 0x00);
                     apdu.setOutgoingAndSend(apdu.getOffsetCdata(), (short) (67 + len));
                 } else {
                     ISOException.throwIt(ISO7816.SW_INCORRECT_P1P2);
@@ -135,7 +155,7 @@ public class HydraApplet extends Applet {
             short buffOff, byte hashAlgo) {
         ecdh.init(ecPrivKey);
         short shareLen = ecdh.generateSecret(input, off, (short) 65, buff, (short) (buffOff + 32));
-        short kekLen = secretHash(buff, (short) (buffOff + 32), shareLen, buff, buffOff, hashAlgo);
+        short kekLen = secretHash(buff, (short) (buffOff + 32), shareLen, buff, buffOff);
         aesKey.setKey(buff, buffOff);
         aesCipher.init(aesKey, Cipher.MODE_DECRYPT);
         return aesCipher.doFinal(input, (short) (65 + off), (short) (len - 65), output, outOff);
@@ -143,66 +163,23 @@ public class HydraApplet extends Applet {
 
     private short keyEncrypt(byte[] input, short off, short len, byte[] output, short outOff, byte[] buff,
             short buffOff, byte hashAlgo) {
-		try {
-        tmpEcPrivKey = (ECPrivateKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PRIVATE_TRANSIENT_DESELECT,
-                KeyBuilder.LENGTH_EC_FP_256, false);
-		} catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x01));
-		}
-		try {
-        tmpEcPubKey = (ECPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_EC_FP_PUBLIC, KeyBuilder.LENGTH_EC_FP_256,
-                false);
-        } catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x02));
-		}
-		try {
+        tmpEcPrivKey.clearKey();
+        tmpEcPubKey.clearKey();
         eccAlgo.setCurveParameters(tmpEcPrivKey);
-        } catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x03));
-		}
-		try {
         eccAlgo.setCurveParameters(tmpEcPubKey);
-        } catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x04));
-		}
-		try {
         tmpKp = new KeyPair(tmpEcPubKey, tmpEcPrivKey);
         tmpKp.genKeyPair();
-        } catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x05));
-		}
-		try {
         ecdh.init(tmpEcPrivKey);
-        } catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x06));
-		}
-		try {
         short shareLen = ecdh.generateSecret(input, off, (short) 65, buff, (short) (buffOff + 32));
-        short kekLen = secretHash(buff, (short) (buffOff + 32), shareLen, buff, buffOff, hashAlgo);
-        } catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x07));
-		}
-		try {
+        short kekLen = secretHash(buff, (short) (buffOff + 32), shareLen, buff, buffOff);
         aesKey.setKey(buff, buffOff);
-        } catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x08));
-		}
-		try {
         aesCipher.init(aesKey, Cipher.MODE_ENCRYPT);
-        } catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x09));
-		}
         short resLen = 0;
-        try {
         resLen = aesCipher.doFinal(input, (short) (65 + off), (short) (len - 65), output, outOff);
-        } catch (Exception e) {
-			ISOException.throwIt(Util.makeShort((byte) 0x6f, (byte) 0x0A));
-		}
         return resLen;
     }
 
-    private short secretHash(byte[] input, short off, short len, byte[] output, short outOff, byte hashAlgo) {
-        hash = MessageDigest.getInstance(hashAlgo, false);
+    private short secretHash(byte[] input, short off, short len, byte[] output, short outOff) {
         hash.reset();
         return hash.doFinal(input, off, len, output, outOff);
     }
