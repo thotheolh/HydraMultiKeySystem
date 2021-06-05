@@ -43,13 +43,14 @@ A 'HydraAplet.cap' file is available in the 'JavaCard-Applet' folder with source
 		- 	INS: 2A   (PSO)
 		-	P1:  0x01 (DECRYPT) or 0x02 (RECRYPT)
 		-	P2:  0x04 (MessageDigest.ALG_SHA256)
-		-	LC:  0x63 to 0x83 (99 to 131 bytes)
+		-	LC:  0x63 to 0x83 (99 to 131 bytes) for DECRYPT mode or 0xA4 t 0xC4 (164 to 196 bytes) for RECRYPT mode
 		-	LE:  LC   (Same as LC)
 		
 		-	Data:
 			-	Version (2 bytes, 0x0100)
-			-	Uncompressed Target ECC-SECP256R1 Public Key (65 bytes)
+			-	Uncompressed Target ECC-SECP256R1 Public Key (65 bytes) for DECRYPT mode or Uncompressed Ephemeral ECC-SECP256R1 Public Key (65 bytes) for RECRYPT mode
 			-	Encrypted Secret (32 to 64 bytes length of AES-ECB-256 encrypted secret)
+			-	Uncompressed Target ECC-SECP256R1 Public Key (65 bytes) for RECRYPT mode only
 		
 	-	Output:
 		-	SW:  0x9000
@@ -58,4 +59,4 @@ A 'HydraAplet.cap' file is available in the 'JavaCard-Applet' folder with source
 		-	Re-encrypted Data (P1 == 0x02):	
 			-	Version (2 bytes, 0x0100)
 			-	Uncompressed Ephemeral ECC-SECP256R1 Public Key (65 bytes)
-			-	Re-encrypted Secret (32 to 64 bytes length of AES-ECB-256 encrypted secret)		
+			-	Re-encrypted Secret (32 to 64 bytes length of AES-ECB-256 encrypted secret)
