@@ -1,5 +1,8 @@
 # JavaCard Applet for Hdyra Multi-Key System
 
+### Protocol Version
+- Version `1.0`
+
 ### AID
 - Package AID: 48 59 44 52 41
 - Applet AID : 48 59 44 52 41 30 31 30 30
